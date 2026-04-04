@@ -243,6 +243,31 @@ class PortingWorkspaceTests(unittest.TestCase):
         self.assertIn('mode=direct-connect', direct_result.stdout)
         self.assertIn('mode=deep-link', deep_link_result.stdout)
 
+    def test_dependencies_module_tracks_fmt_version(self) -> None:
+        from src.dependencies import DEPENDENCIES, get_dependency
+
+        fmt_dep = get_dependency('fmt')
+        self.assertEqual(fmt_dep.version, '12.1.0')
+        self.assertIn('12.1.0', fmt_dep.url)
+        self.assertGreaterEqual(len(DEPENDENCIES), 1)
+
+    def test_dependencies_cli_runs(self) -> None:
+        list_result = subprocess.run(
+            [sys.executable, '-m', 'src.main', 'dependencies'],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        fmt_result = subprocess.run(
+            [sys.executable, '-m', 'src.main', 'dependencies', '--name', 'fmt'],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        self.assertIn('Dependencies:', list_result.stdout)
+        self.assertIn('fmt', list_result.stdout)
+        self.assertIn('12.1.0', fmt_result.stdout)
+
 
 if __name__ == '__main__':
     unittest.main()

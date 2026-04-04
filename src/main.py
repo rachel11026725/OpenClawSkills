@@ -280,6 +280,25 @@ def _cmd_deep_link_mode(args: argparse.Namespace) -> None:
     _print(f"mode=deep-link workspace={workspace}")
 
 
+def _cmd_dependencies(args: argparse.Namespace) -> None:
+    from src.dependencies import DEPENDENCIES, get_dependency
+
+    name = getattr(args, "name", None)
+    if name:
+        try:
+            dep = get_dependency(name)
+            _print(f"Dependency: {dep.name}")
+            _print(f"Version: {dep.version}")
+            _print(f"URL: {dep.url}")
+        except KeyError as exc:
+            _print(str(exc))
+            sys.exit(1)
+    else:
+        _print(f"Dependencies: {len(DEPENDENCIES)}")
+        for dep in DEPENDENCIES:
+            _print(f"  - {dep.name}=={dep.version}")
+
+
 # ---------------------------------------------------------------------------
 # Argument parser
 # ---------------------------------------------------------------------------
@@ -385,6 +404,10 @@ def _build_parser() -> argparse.ArgumentParser:
     p_deep = subs.add_parser("deep-link-mode", help="Deep link mode")
     p_deep.add_argument("workspace")
 
+    # dependencies
+    p_deps = subs.add_parser("dependencies", help="List vendored third-party dependencies")
+    p_deps.add_argument("--name", default=None, help="Show a specific dependency by name")
+
     return parser
 
 
@@ -411,6 +434,7 @@ _HANDLERS = {
     "bootstrap-graph": _cmd_bootstrap_graph,
     "direct-connect-mode": _cmd_direct_connect_mode,
     "deep-link-mode": _cmd_deep_link_mode,
+    "dependencies": _cmd_dependencies,
 }
 
 
