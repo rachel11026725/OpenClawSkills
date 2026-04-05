@@ -3,7 +3,6 @@
 # 生成当日总结
 
 TODAY=$(date +%Y-%m-%d)
-MEMORY_DIR="$HOME/.openclaw/memory"
 WORKSPACE_DIR="$HOME/.openclaw/workspace"
 
 echo "📅 $TODAY 每日总结"
@@ -17,7 +16,7 @@ echo ""
 SESSION_DIR="$HOME/.openclaw/agents/main/sessions"
 if [ -d "$SESSION_DIR" ]; then
   # 查找今日修改的会话文件
-  find "$SESSION_DIR" -name "*.jsonl" -mtime -1 2>/dev/null | while read f; do
+  find "$SESSION_DIR" -name "*.jsonl" -mtime -1 2>/dev/null | while IFS= read -r f; do
     BASENAME=$(basename "$f")
     echo "- 会话: $BASENAME"
   done | head -5
@@ -28,8 +27,10 @@ echo ""
 # 2. 检查 Git 提交
 echo "### 🔧 Git 提交 (工作区)"
 echo ""
-cd "$WORKSPACE_DIR" 2>/dev/null && git log --oneline --since="00:00" --until="now" 2>/dev/null | head -5
-if [ $? -ne 0 ]; then
+COMMITS=$(cd "$WORKSPACE_DIR" 2>/dev/null && git log --oneline --since="00:00" --until="now" 2>/dev/null | head -5)
+if [ -n "$COMMITS" ]; then
+  echo "$COMMITS"
+else
   echo "   今日无 Git 提交"
 fi
 echo ""
@@ -39,7 +40,7 @@ echo "### 🛠️ 技能更新"
 echo ""
 if [ -f "$HOME/.openclaw/workspace/.clawhub/lock.json" ]; then
   echo "   已安装的技能:"
-  grep -o '"[^"]*": {' "$HOME/.openclaw/workspace/.clawhub/lock.json" | head -10 | sed 's/["{:]//g' | while read skill; do
+  grep -o '"[^"]*": {' "$HOME/.openclaw/workspace/.clawhub/lock.json" | head -10 | sed 's/["{:]//g' | while IFS= read -r skill; do
     echo "   - $skill"
   done
 fi
@@ -54,7 +55,7 @@ echo ""
 echo "### 💾 OpenClaw 备份"
 echo ""
 if [ -d "$HOME/Desktop/OpenClawBak" ]; then
-  LATEST_BACKUP=$(ls -t "$HOME/Desktop/OpenClawBak"/*.tar.gz 2>/dev/null | head -1)
+  LATEST_BACKUP=$(find "$HOME/Desktop/OpenClawBak" -name "*.tar.gz" -exec ls -t {} + 2>/dev/null | head -1)
   if [ -n "$LATEST_BACKUP" ]; then
     echo "   ✅ 已备份: $(basename "$LATEST_BACKUP")"
   fi

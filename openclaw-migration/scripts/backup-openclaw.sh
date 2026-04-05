@@ -24,7 +24,7 @@ chmod +x "$BACKUP_DIR/restore-openclaw.sh"
 
 # Backup
 echo "📦 正在备份 ~/.openclaw/ ..."
-cd ~
+cd ~ || exit
 tar -czf "$BACKUP_FILE" .openclaw 2>/dev/null
 
 echo ""

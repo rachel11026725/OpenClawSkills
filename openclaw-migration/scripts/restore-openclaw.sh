@@ -12,7 +12,7 @@ echo "===================="
 # Find backup file
 if [ -z "$1" ]; then
   # Find the latest backup file
-  BACKUP_FILE=$(ls -t "$BACKUP_DIR"/openclaw-backup-*.tar.gz 2>/dev/null | head -1)
+  BACKUP_FILE=$(find "$BACKUP_DIR" -name "openclaw-backup-*.tar.gz" -exec ls -t {} + 2>/dev/null | head -1)
   if [ -z "$BACKUP_FILE" ]; then
     echo "❌ 未找到备份文件!"
     echo "用法: ./restore-openclaw.sh <backup-file.tar.gz>"
