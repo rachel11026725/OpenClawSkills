@@ -1,0 +1,14 @@
+blank_issues_enabled: true
+contact_links:
+  - name: ❓ Help & Questions
+    url: https://github.com/rachel11026725/OpenClawSkills/discussions
+    about: Ask questions and get help from the community
+  - name: ⭐️ Feature Request
+    url: https://github.com/rachel11026725/OpenClawSkills/discussions/new?category=ideas
+    about: Add your request or discuss the project with the community
+  - name: 📫 Support
+    url: https://github.com/orgs/community/discussions
+    about: For general GitHub support questions please open a topic in the community forum
+  - name: 🗂 Documentation
+    url: https://github.com/rachel11026725/OpenClawSkills#readme
+    about: Read the project documentation and README
