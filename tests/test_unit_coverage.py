@@ -8,7 +8,6 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
-from src import config as config_module
 from src import main
 from src.commands import CommandEntry
 from src.config import WorkspaceConfig, get_config
@@ -107,20 +106,16 @@ class RegistryTests(unittest.TestCase):
 
 class ConfigTests(unittest.TestCase):
     def test_get_config_returns_singleton_with_expected_defaults(self) -> None:
-        original = config_module._default_config
-        config_module._default_config = None
-        try:
-            first = get_config()
-            second = get_config()
-        finally:
-            config_module._default_config = original
+        first = get_config()
+        second = get_config()
+        defaults = WorkspaceConfig()
 
         self.assertIs(first, second)
         self.assertIsInstance(first, WorkspaceConfig)
-        self.assertEqual(first.root, Path(".").resolve())
-        self.assertEqual(first.session_dir, Path(".") / ".sessions")
-        self.assertEqual(first.archive_dir, Path(".") / "archive")
-        self.assertEqual(first.default_limit, 10)
+        self.assertEqual(defaults.root, Path(".").resolve())
+        self.assertEqual(defaults.session_dir, Path(".") / ".sessions")
+        self.assertEqual(defaults.archive_dir, Path(".") / "archive")
+        self.assertEqual(defaults.default_limit, 10)
 
 
 class SessionStoreTests(unittest.TestCase):
@@ -208,31 +203,32 @@ class MainEntryPointTests(unittest.TestCase):
         self.assertEqual(result, 1)
         self.assertIn("Unknown subcommand: ghost", stderr.getvalue())
 
-    def test_show_and_exec_handlers_exit_for_missing_entries(self) -> None:
-        for handler, attr, expected in (
-            (main._cmd_show_command, "missing-command", "Command not found"),
-            (main._cmd_show_tool, "missing-tool", "Tool not found"),
-            (main._cmd_exec_command, "missing-command", "Command not found"),
-            (main._cmd_exec_tool, "missing-tool", "Tool not found"),
+    def test_public_cli_exits_for_missing_registry_entries(self) -> None:
+        for argv, expected in (
+            (["show-command", "missing-command"], "Command not found"),
+            (["show-tool", "missing-tool"], "Tool not found"),
+            (["exec-command", "missing-command", "hello"], "Command not found"),
+            (["exec-tool", "missing-tool", "hello"], "Tool not found"),
         ):
-            with self.subTest(handler=handler.__name__):
-                with patch("src.main._print") as mocked_print:
+            with self.subTest(argv=argv):
+                stdout = io.StringIO()
+                with redirect_stderr(io.StringIO()), patch("sys.stdout", stdout):
                     with self.assertRaises(SystemExit) as exc:
-                        handler(SimpleNamespace(name=attr, prompt="hello"))
+                        main.main(argv)
 
                 self.assertEqual(exc.exception.code, 1)
-                mocked_print.assert_called_once()
-                self.assertIn(expected, mocked_print.call_args.args[0])
+                self.assertIn(expected, stdout.getvalue())
 
-    def test_load_session_handler_exits_for_missing_session(self) -> None:
-        with patch("src.main._print") as mocked_print:
+    def test_public_cli_exits_for_missing_session(self) -> None:
+        stdout = io.StringIO()
+        with patch("sys.stdout", stdout):
             with self.assertRaises(SystemExit) as exc:
-                main._cmd_load_session(SimpleNamespace(session_id="missing-session"))
+                main.main(["load-session", "missing-session"])
 
         self.assertEqual(exc.exception.code, 1)
-        self.assertIn("Session not found", mocked_print.call_args.args[0])
+        self.assertIn("Session not found", stdout.getvalue())
 
-    def test_turn_loop_uses_plain_output_when_structured_output_is_disabled(self) -> None:
+    def test_public_cli_turn_loop_uses_plain_output_when_structured_output_is_disabled(self) -> None:
         runtime = MagicMock()
         runtime.bootstrap_session.return_value = SimpleNamespace(
             turn_result=SimpleNamespace(
@@ -241,18 +237,15 @@ class MainEntryPointTests(unittest.TestCase):
                 usage=SimpleNamespace(input_tokens=1, output_tokens=1),
             )
         )
+        stdout = io.StringIO()
 
         with patch("src.runtime.PortRuntime", return_value=runtime):
-            with patch("src.main._print") as mocked_print:
-                main._cmd_turn_loop(
-                    SimpleNamespace(query=["review", "tool"], max_turns=2, structured_output=False)
-                )
+            with patch("sys.stdout", stdout):
+                result = main.main(["turn-loop", "review", "tool", "--max-turns", "2"])
 
+        self.assertEqual(result, 0)
         self.assertEqual(runtime.bootstrap_session.call_count, 2)
-        self.assertEqual(
-            [call.args[0] for call in mocked_print.call_args_list],
-            ["Turn 1: plain output", "Turn 2: plain output"],
-        )
+        self.assertEqual(stdout.getvalue().strip().splitlines(), ["Turn 1: plain output", "Turn 2: plain output"])
 
 
 if __name__ == "__main__":
