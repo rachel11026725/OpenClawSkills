@@ -212,7 +212,7 @@ class MainEntryPointTests(unittest.TestCase):
         ):
             with self.subTest(argv=argv):
                 stdout = io.StringIO()
-                with redirect_stderr(io.StringIO()), patch("sys.stdout", stdout):
+                with patch("sys.stdout", stdout):
                     with self.assertRaises(SystemExit) as exc:
                         main.main(argv)
 
